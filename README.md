@@ -211,3 +211,4 @@ MIT License.
 Author: mgx96  
 Status: Research and development  
 Website: Coming soon
+Discord: mgx96
