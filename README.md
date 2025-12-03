@@ -8,7 +8,7 @@ Author: mgx96
 
 The Cross-Chain Transaction Validator (CCTV) is a safety-first validation layer designed to stop users from sending assets to the wrong chain, incompatible addresses, or non-receivable contracts.
 
-Mis-sent transactions are one of the largest sources of permanent, irreversible asset loss in Web3. CCTV introduces a unified, chain-agnostic rule engine that prevents these errors **before** the transaction is broadcast, improving user safety and accelerating decentralized onboarding.
+Mis-sent transactions are one of the largest sources of permanent, irreversible asset loss in Web3. CCTV introduces a unified, chain-agnostic rule engine that prevents these errors **before** the transaction is broadcast, improving user safety.
 
 ---
 
