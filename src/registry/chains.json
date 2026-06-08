@@ -1,0 +1,12 @@
+{
+  "1": { "name": "Ethereum Mainnet", "shortName": "ethereum", "nativeToken": "ETH", "family": "evm" },
+  "10": { "name": "Optimism", "shortName": "optimism", "nativeToken": "ETH", "family": "evm" },
+  "56": { "name": "BNB Smart Chain", "shortName": "bsc", "nativeToken": "BNB", "family": "evm" },
+  "137": { "name": "Polygon PoS", "shortName": "polygon", "nativeToken": "POL", "family": "evm" },
+  "250": { "name": "Fantom", "shortName": "fantom", "nativeToken": "FTM", "family": "evm" },
+  "8453": { "name": "Base", "shortName": "base", "nativeToken": "ETH", "family": "evm" },
+  "42161": { "name": "Arbitrum One", "shortName": "arbitrum", "nativeToken": "ETH", "family": "evm" },
+  "43114": { "name": "Avalanche C-Chain", "shortName": "avalanche", "nativeToken": "AVAX", "family": "evm" },
+  "59144": { "name": "Linea", "shortName": "linea", "nativeToken": "ETH", "family": "evm" },
+  "534352": { "name": "Scroll", "shortName": "scroll", "nativeToken": "ETH", "family": "evm" }
+}

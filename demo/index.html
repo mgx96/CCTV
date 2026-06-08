@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CCTV — Cross-Chain Transaction Validator</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>CCTV</h1>
+        <p class="tagline">
+          Cross-Chain Transaction Validator — an embeddable SDK that checks what a wallet
+          is about to send or sign, <em>before</em> the user approves it.
+        </p>
+      </header>
+
+      <nav class="tabs" role="tablist">
+        <button class="tab" data-tab="transfer" role="tab" aria-selected="true">Transfer guard</button>
+        <button class="tab" data-tab="signing" role="tab" aria-selected="false">Signing guard</button>
+      </nav>
+
+      <!-- ───────────────────────── Transfer guard ───────────────────────── -->
+      <section id="panel-transfer" class="panel" role="tabpanel">
+        <p class="panel-intro">
+          Catch cross-chain mis-sends: wrong token-chain pairings, wrong CEX deposit
+          networks, and address formats that don't belong to the destination chain.
+          Fully offline — no RPC, deterministic, free.
+        </p>
+
+        <form id="form">
+          <div class="row">
+            <label>
+              Token
+              <select id="token"></select>
+            </label>
+            <label>
+              Destination chain
+              <select id="chain"></select>
+            </label>
+          </div>
+
+          <div class="row">
+            <label>
+              Depositing to an exchange? <span class="muted">(optional)</span>
+              <select id="exchange">
+                <option value="">— not a CEX deposit —</option>
+              </select>
+            </label>
+            <label>
+              Recipient address <span class="muted">(optional)</span>
+              <input id="address" type="text" placeholder="0x… (or paste any address)" autocomplete="off" />
+            </label>
+          </div>
+
+          <button type="submit">Validate transfer</button>
+        </form>
+
+        <section id="result" hidden></section>
+
+        <details class="examples">
+          <summary>Try an example</summary>
+          <button type="button" data-ex="arb-polygon">ARB → Polygon (wrong chain)</button>
+          <button type="button" data-ex="usdt-coinbase-poly">USDT → Coinbase over Polygon (wrong network)</button>
+          <button type="button" data-ex="tron-addr">USDC → Ethereum, Tron address (wrong format)</button>
+          <button type="button" data-ex="safe">USDC → Base, valid address (safe)</button>
+        </details>
+      </section>
+
+      <!-- ───────────────────────── Signing guard ───────────────────────── -->
+      <section id="panel-signing" class="panel" role="tabpanel" hidden>
+        <p class="panel-intro">
+          Defend against the <strong>Bybit class</strong> of attacks — where a compromised
+          UI shows a benign action while the wallet signs something malicious. CCTV decodes
+          the <em>actual</em> calldata and EIP-712 payloads so the user sees what they're
+          really approving.
+        </p>
+
+        <form id="sign-form">
+          <label>
+            Contract address <span class="muted">(to)</span>
+            <input id="sign-to" type="text" placeholder="0x… target contract" autocomplete="off" />
+          </label>
+          <label>
+            Calldata <span class="muted">(data)</span>
+            <textarea id="sign-data" rows="3" placeholder="0x… raw transaction calldata" autocomplete="off"></textarea>
+          </label>
+          <button type="submit">Analyze calldata</button>
+        </form>
+
+        <section id="sign-result" hidden></section>
+
+        <details class="examples" open>
+          <summary>Replay a real attack pattern</summary>
+          <button type="button" data-sx="bybit">Bybit-class delegatecall (Safe)</button>
+          <button type="button" data-sx="approve">Unlimited ERC-20 approval</button>
+          <button type="button" data-sx="permit">Unlimited Permit (ERC-2612)</button>
+          <button type="button" data-sx="seaport">Seaport order signature</button>
+          <button type="button" data-sx="blindhash">Blind 32-byte hash sign</button>
+        </details>
+
+        <div class="integration">
+          <h2>Wire it into a wallet</h2>
+          <p class="muted">
+            The wallet supplies its own RPC provider, so simulation costs CCTV nothing.
+            Call the validator inside your signing flow and block on the verdict.
+          </p>
+          <pre><code id="snippet"></code></pre>
+        </div>
+      </section>
+
+      <footer>
+        <p>
+          Deterministic, registry-based offline checks + optional, provider-supplied
+          simulation. Registry and attack data are community snapshots — always confirm in
+          your wallet. <a href="https://github.com/mgx96/CCTV">Source</a>.
+        </p>
+      </footer>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

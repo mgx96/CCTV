@@ -1,0 +1,43 @@
+{
+  "name": "cctv-validator",
+  "version": "0.2.0",
+  "description": "Cross-Chain Transaction Validator — prevents sending assets to the wrong network. Deterministic, registry-based, no RPC required.",
+  "type": "module",
+  "main": "./dist/cctv.js",
+  "module": "./dist/cctv.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/cctv.js"
+    }
+  },
+  "files": [
+    "dist",
+    "registry",
+    "src"
+  ],
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.dts.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "demo:dev": "vite -c vite.demo.config.ts",
+    "demo:build": "vite build -c vite.demo.config.ts"
+  },
+  "keywords": [
+    "web3",
+    "cross-chain",
+    "transaction",
+    "validation",
+    "wrong-network",
+    "wallet-safety"
+  ],
+  "author": "mgx96",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
+  }
+}

@@ -1,214 +1,192 @@
 # CCTV — Cross-Chain Transaction Validator
-Protocol Specification — v0.1  
-Author: mgx96  
+
+**An embeddable safety layer for crypto wallets.** CCTV inspects what a wallet is
+about to **send** or **sign** and returns plain-English findings *before* the user
+approves — catching cross-chain mis-sends and blind-signing attacks like the one
+that drained Bybit.
+
+- **Two threat models, one SDK.** Cross-chain mis-sends (wrong chain, wrong CEX
+  deposit network, wrong address format) **and** blind-signing attacks (malicious
+  `delegatecall`, unlimited approvals, Permit/Permit2/Seaport phishing).
+- **Embeddable, not a service.** `createValidator()` drops into a wallet's signing
+  flow. The wallet supplies its own RPC, so CCTV adds **zero cost and zero new trust**.
+- **Offline-first.** Every core check is deterministic calldata / EIP-712 decoding
+  with no network calls. Simulation is optional enrichment, never required.
+- **Dependency-free core.** No web3 libraries — a minimal ABI decoder, shipped as ESM
+  with TypeScript types.
+
+> Status: working MVP. The author (`mgx96`) maintains this as a portfolio project;
+> registries are community snapshots, not guarantees — always confirm in your wallet.
 
 ---
 
-## Overview
+## Install
 
-The Cross-Chain Transaction Validator (CCTV) is a safety-first validation layer designed to stop users from sending assets to the wrong chain, incompatible addresses, or non-receivable contracts.
+```bash
+npm install cctv-validator
+```
 
-Mis-sent transactions are one of the largest sources of permanent, irreversible asset loss in Web3. CCTV introduces a unified, chain-agnostic rule engine that prevents these errors **before** the transaction is broadcast, improving user safety.
+## Quick start
 
----
+```ts
+import { createValidator } from "cctv-validator";
 
-## Key Features
+// The wallet passes its own EIP-1193 provider. Simulation then runs on the
+// wallet's RPC — CCTV never makes a keyed request of its own.
+const validator = createValidator({ provider: window.ethereum });
 
-- **Chain-agnostic**: supports major EVM L1s, L2s, rollups, and sidechains.  
-- **Non-custodial**: CCTV never handles user funds.  
-- **Deterministic rules**: each validation rule is versioned, explicit, and extensible.  
-- **Universal integration**: wallets, CEXs, bridges, and applications integrate through a single API or SDK.  
-- **Developer-friendly**: lightweight JSON registry and modular validation engine.  
+// Inside your eth_sendTransaction handler, before showing the confirm screen:
+const result = await validator.validateTransaction({
+  to: "0xSafe…",
+  data: "0x6a761202…", // raw calldata the user is about to sign
+});
 
----
+if (result.status === "unsafe" || result.status === "catastrophically_unsafe") {
+  blockAndWarn(result.findings); // render the decoded findings, require extra confirmation
+}
+```
 
-## Architecture (High-Level)
+Every method returns the same shape:
 
-CCTV consists of five core components:
+```ts
+interface ValidationResult {
+  status: Classification;   // worst finding's severity
+  ok: boolean;              // true only when status === "valid"
+  findings: Finding[];      // each with rule, name, classification, explanation,
+                            // recommendation, correctiveActions[]
+}
+```
 
-### 1. Chain Registry
-Stores canonical metadata for supported networks:
+Severity ordering (low → high):
 
-- Chain ID  
-- Native token  
-- Address format rules  
-- Canonical bridge addresses  
-
-### 2. Token Registry
-Cross-chain canonical token mapping:
-
-- Token symbol → contract address per chain  
-- Wrapped and bridged variants  
-- Rebase / fee-on-transfer tokens  
-
-### 3. Address Intelligence Layer
-Categorizes:
-
-- CEX deposit addresses  
-- Bridge endpoints  
-- Burn / black-hole addresses  
-- Non-receivable system contracts  
-
-### 4. Validation Engine
-Classifies transactions as:
-
-- `valid`  
-- `suspicious`  
-- `unsafe`  
-- `catastrophically_unsafe`  
-
-### 5. Developer API / SDK
-Interface for wallets, CEXs, dApps, and bridges.
+```
+valid  <  warning  <  high_risk  <  unsafe  <  catastrophically_unsafe
+```
 
 ---
 
-## Mis-Send Detection Rules (v0.1)
+## The three entry points
 
-### Critical Rules (Catastrophic Loss)
+### 1. `validateTransaction(tx, opts?)` — what am I really sending?
 
-#### 4.1 Token-Chain Mismatch  
-Sending a token to a chain where it does not exist natively.  
-Classification: `catastrophically_unsafe`
+Decodes the calldata offline and (if a provider is configured) simulates it. This is
+the **Bybit-class defense**: a compromised UI can show "send 0.1 ETH" while the
+calldata swaps the multisig's logic via `delegatecall`. CCTV decodes the real intent.
 
-#### 4.2 Missing Bridge Path  
-Cross-chain transfer without interacting with a canonical bridge.  
-Classification: `catastrophically_unsafe`
+```ts
+const result = await validator.validateTransaction(tx, {
+  declaredIntent: { summary: "Send 0.1 ETH", kind: "transfer" }, // optional, for mismatch detection
+});
+```
 
-#### 4.5 Burn / Black-Hole Address Detection  
-Transfer to known irreversible addresses.  
-Classification: `catastrophically_unsafe`
+`opts.skipSimulation` forces an offline-only check; `opts.declaredIntent` lets CCTV
+escalate when the wallet's *claimed* action contradicts the decoded calldata.
 
-#### 4.9 Non-EVM Address Format Mismatch  
-Address belongs to a non-EVM ecosystem.  
-Classification: `catastrophically_unsafe`
+### 2. `validateSignature(req)` — what am I really signing?
 
----
+Synchronous, fully offline. Inspects EIP-712 typed data and `personal_sign` payloads
+for off-chain authorizations that move funds: ERC-2612 `Permit`, Uniswap Permit2,
+Seaport orders, and blind 32-byte hash signing.
 
-### Unsafe Rules
+```ts
+const result = validator.validateSignature({
+  primaryType: "Permit",
+  domain: { verifyingContract: token },
+  message: { spender, value, deadline },
+});
+```
 
-#### 4.3 Contract Cannot Receive Tokens  
-Receiver contract cannot handle the incoming token.  
-Classification: `unsafe`
+### 3. `validateTransfer(intent)` — am I sending to the right chain?
 
-#### 4.4 Native Token to Non-Payable Contract  
-Sending ETH/MATIC/AVAX/etc. to a non-payable contract.  
-Classification: `unsafe`
+Synchronous, registry-based. Catches cross-chain mis-sends before broadcast.
 
-#### 4.6 Wrong CEX Deposit Network  
-Deposit network mismatch.  
-Classification: `high_risk`
-
----
-
-### Incompatibility Rules
-
-#### 4.7 Token Standard Mismatch  
-ERC-20 sent to ERC-721 receiver, etc.  
-Classification: `unsafe`
-
-#### 4.8 Fee-On-Transfer / Rebase Token Hazard  
-Contract may break on unexpected transfer amounts.  
-Classification: `warning`
+```ts
+const result = validator.validateTransfer({
+  token: "USDT",
+  destinationChainId: 137,
+  exchange: "coinbase",          // optional CEX deposit check
+  destinationAddress: "0x…",     // optional address-format check
+});
+```
 
 ---
 
-### Advanced Rule
+## Rules
 
-#### 4.10 Nonce / Replay Domain Collision  
-Signed messages may replay across chains.  
-Classification: `advanced_risk`
+### Signing safety — the Bybit class (rules 5.x)
 
----
+| Rule | Name | Worst classification |
+|------|------|----------------------|
+| 5.1 | Delegatecall execution (Bybit/WazirX class) | `catastrophically_unsafe` |
+| 5.2 | Owner / authority change | `unsafe` |
+| 5.3 | Proxy implementation upgrade | `unsafe` |
+| 5.4 | Token approval (unlimited / `setApprovalForAll`) | `high_risk` |
+| 5.5 | Declared-intent mismatch | `catastrophically_unsafe` |
+| 5.6 | ERC-2612 Permit / Permit2 signature | `high_risk` |
+| 5.7 | Off-chain order signature (Seaport) | `high_risk` |
+| 5.8 | Blind 32-byte hash signing | `warning` |
+| 5.9 | Transaction would revert (simulated) | `unsafe` |
+| 5.10 | Outgoing asset movement (simulated) | `warning` |
 
-## Project Structure (Proposed)
+Rule 5.1 also recurses into the inner call of a Safe `execTransaction`, and downgrades
+to `high_risk` for known-safe `delegatecall` targets (e.g. `MultiSendCallOnly`).
 
-    cctv/
-    │
-    ├── registry/
-    │   ├── chains.json
-    │   ├── tokens.json
-    │   └── addresses.json
-    │
-    ├── validator/
-    │   ├── engine.js
-    │   ├── rules/
-    │   │   ├── tokenChainMismatch.js
-    │   │   ├── bridgeCheck.js
-    │   │   ├── receivableCheck.js
-    │   │   ├── standardMismatch.js
-    │   │   └── ...
-    │   └── outputs.js
-    │
-    ├── sdk/
-    │   ├── javascript/
-    │   └── typescript/
-    │
-    ├── api/
-    │   └── server.js
-    │
-    └── README.md
+### Cross-chain mis-send (rules 4.x)
+
+| Rule | Name | Worst classification |
+|------|------|----------------------|
+| 4.1 | Token-chain mismatch | `catastrophically_unsafe` |
+| 4.6 | Wrong CEX deposit network | `high_risk` |
+| 4.9 | Non-EVM address format mismatch | `catastrophically_unsafe` |
 
 ---
 
-## Example Validation Output
+## Simulation (optional)
 
-    {
-      "status": "unsafe",
-      "riskLevel": 3,
-      "ruleTriggered": "Token-Chain Mismatch",
-      "explanation": "USDT does not exist on the selected destination chain.",
-      "recommendation": "Cancel this transaction.",
-      "correctiveActions": [
-        "Switch to the correct network",
-        "Use the canonical bridge for cross-chain transfers"
-      ]
-    }
+Simulation is **best-effort enrichment** layered on top of the offline checks. If the
+RPC times out, rate-limits, or returns garbage, CCTV silently drops simulation and
+keeps the offline findings — a transport failure is never reported as a revert.
 
----
+Configure the provider however suits your integration:
 
-## MVP Scope (v0.1)
+```ts
+createValidator({ provider: window.ethereum });          // wallet's EIP-1193 provider (recommended)
+createValidator({ provider: "https://your-rpc.example" }); // an RPC URL
+createValidator({ provider: customSimulationProvider });   // your own { simulate() }
+createValidator({ usePublicRpcFallback: true });           // keyless public RPCs (rate-limited; demos only)
+```
 
-- Support for top EVM chains  
-- Token registry for top ~100 assets  
-- Core rules 4.1–4.7 implemented  
-- REST API and JavaScript/TypeScript SDK  
-- Minimal browser extension prototype  
+Lower-level building blocks (`rpcSimulationProvider`, `interpretSimulation`,
+`decodeRevertReason`, `publicRpcUrl`) and the standalone analyzers
+(`analyzeTransaction`, `analyzeSignature`, `validate`) are also exported for advanced use.
 
 ---
 
-## Roadmap
+## Demo
 
-v0.1 — Specification (current)  
-v0.2 — MVP validator and SDK  
-v0.3 — Beta release (20+ chains, NFT rules, CEX mapping)  
-v0.4 — Decentralization path (on-chain registries)  
-v1.0 — Public launch  
+A browser demo lives in [`demo/`](demo/) and is published via GitHub Pages. It has two
+tabs — **Transfer guard** (cross-chain checks) and **Signing guard** (replays the
+Bybit-class delegatecall, unlimited approval, Permit, Seaport, and blind-hash patterns).
+The demo uses public RPCs only; no API key is ever shipped in the bundle.
+
+```bash
+npm install
+npm run demo:dev      # local dev server
+npm run demo:build    # static build → docs/ (GitHub Pages)
+```
 
 ---
 
-## Contributing
+## Development
 
-Contribution guidelines will be published after the MVP release.
-
-Areas expected:
-
-- New rules  
-- Registry updates  
-- SDK improvements  
-- Documentation  
-- Security research  
+```bash
+npm test          # vitest
+npm run typecheck # tsc --noEmit
+npm run build     # library build (dist/) + type declarations
+```
 
 ---
 
 ## License
 
-MIT License.
-
----
-
-## Contact
-
-Author: mgx96  
-Status: Research and development  
-Website: Coming soon  
-Discord: mgx96
+MIT © mgx96

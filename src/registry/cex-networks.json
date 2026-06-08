@@ -1,0 +1,35 @@
+{
+  "_meta": {
+    "lastUpdated": "2026-06-08",
+    "note": "Community-maintained snapshot of which networks each exchange credits per asset. Exchanges change support over time — always confirm on the exchange's deposit screen before sending. Network keys are chain shortNames (see chains.json) plus non-EVM keys: bitcoin, tron, solana."
+  },
+  "exchanges": {
+    "binance": {
+      "name": "Binance",
+      "assets": {
+        "USDT": ["ethereum", "bsc", "tron", "polygon", "arbitrum", "optimism", "avalanche", "solana", "base"],
+        "USDC": ["ethereum", "bsc", "polygon", "arbitrum", "optimism", "avalanche", "solana", "base"],
+        "ETH": ["ethereum", "arbitrum", "optimism", "base", "bsc"],
+        "BTC": ["bitcoin", "bsc"]
+      }
+    },
+    "coinbase": {
+      "name": "Coinbase",
+      "assets": {
+        "USDC": ["ethereum", "base", "solana", "polygon", "arbitrum", "optimism", "avalanche"],
+        "USDT": ["ethereum"],
+        "ETH": ["ethereum", "base", "arbitrum", "optimism"],
+        "BTC": ["bitcoin"]
+      }
+    },
+    "kraken": {
+      "name": "Kraken",
+      "assets": {
+        "USDT": ["ethereum", "tron", "solana", "polygon"],
+        "USDC": ["ethereum", "solana", "polygon", "arbitrum", "optimism", "base"],
+        "ETH": ["ethereum", "arbitrum", "optimism", "base"],
+        "BTC": ["bitcoin"]
+      }
+    }
+  }
+}
