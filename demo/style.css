@@ -135,6 +135,7 @@ code { font: 0.78rem/1.5 ui-monospace, "SF Mono", Menlo, monospace; color: var(-
 .scenario {
   text-align: left;
   background: var(--panel);
+  color: var(--text);
   border: 1px solid var(--border);
   border-radius: 11px;
   padding: 14px 16px;
