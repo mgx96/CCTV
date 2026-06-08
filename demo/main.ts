@@ -93,9 +93,14 @@ const PLAIN: Record<string, string> = {
   "5.10": "This moves assets out of your wallet. Make sure that's what you intended.",
 };
 
+// A bounded approval/permit (rule 5.4/5.6 downgraded to a warning) is the safe
+// end-state after the auto-fix — there's nothing left to correct.
+const isBoundedApprovalWarning = (w?: Finding): boolean =>
+  !!w && (w.rule === "5.4" || w.rule === "5.6") && w.classification === "warning";
+
 function plainMessage(w: Finding): string {
-  // A bounded approval/permit is the safer state after a fix — don't keep saying "unlimited".
-  if ((w.rule === "5.4" || w.rule === "5.6") && w.classification === "warning") {
+  // Don't keep saying "unlimited" once the approval has been limited.
+  if (isBoundedApprovalWarning(w)) {
     return "This now grants only a limited amount — much safer. Still, revoke approvals you no longer use.";
   }
   return PLAIN[w.rule] ?? w.recommendation;
@@ -137,16 +142,23 @@ function computeFix(s: Subject, r: ValidationResult): Fix | null {
   }
 
   if (s.kind === "transaction") {
-    if (has(r, "5.4")) {
+    const approval = r.findings.find((f) => f.rule === "5.4");
+    // Only an *unlimited* erc20 approve has a safe bounded rewrite. Once it's
+    // already limited (warning) — or it's a setApprovalForAll — there's nothing
+    // left to fix, so don't offer a button that would just re-apply the limit.
+    if (approval?.classification === "high_risk" && s.tx.data.startsWith("0x095ea7b3")) {
       const spender = "0x" + s.tx.data.slice(34, 74); // approve(spender, amount): spender is in the first word
       return { label: "Use a one-time limit instead", apply: () => { s.tx.data = encodeApprove(spender, 1000n); } };
     }
-    return null; // delegatecall / authority / upgrade — must be rejected, not "fixed"
+    return null; // delegatecall / authority / upgrade / already-bounded — not auto-fixable here
   }
 
-  if (isTyped(s.req) && has(r, "5.6")) {
-    const req = s.req;
-    return { label: "Sign a limited amount instead", apply: () => { req.message = { ...req.message, value: "1000" }; } };
+  if (isTyped(s.req)) {
+    const permit = r.findings.find((f) => f.rule === "5.6");
+    if (permit?.classification === "high_risk") {
+      const req = s.req;
+      return { label: "Sign a limited amount instead", apply: () => { req.message = { ...req.message, value: "1000" }; } };
+    }
   }
   return null;
 }
@@ -185,13 +197,19 @@ async function renderVerdict(outcome?: Outcome) {
     actions = `<p class="terminal good">All clear. In a real wallet, this is where you'd confirm and send.</p>`;
   } else if (r.ok) {
     actions = `<div class="actions"><button class="btn primary" id="continue">Looks good — continue</button></div>`;
-  } else {
-    const primary = fix
-      ? `<button class="btn primary" id="fix">${escapeHtml(fix.label)}</button>`
-      : `<button class="btn primary" id="reject">Cancel — keep my funds safe</button>`;
+  } else if (fix) {
     actions = `
       <div class="actions">
-        ${primary}
+        <button class="btn primary" id="fix">${escapeHtml(fix.label)}</button>
+        <button class="btn ghost" id="proceed">Proceed anyway</button>
+      </div>`;
+  } else if (isBoundedApprovalWarning(w)) {
+    // Already corrected to a one-time limit — nothing left to fix, let them go on.
+    actions = `<div class="actions"><button class="btn primary" id="continue">Looks good — continue</button></div>`;
+  } else {
+    actions = `
+      <div class="actions">
+        <button class="btn primary" id="reject">Cancel — keep my funds safe</button>
         <button class="btn ghost" id="proceed">Proceed anyway</button>
       </div>`;
   }
