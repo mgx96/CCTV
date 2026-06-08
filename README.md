@@ -189,4 +189,4 @@ npm run build     # library build (dist/) + type declarations
 
 ## License
 
-MIT © mgx96
+MIT
