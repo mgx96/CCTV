@@ -16,12 +16,12 @@ const MULTISEND_CALL_ONLY = "0x9641d764fc13c8B624c04430C7356C1C7C8102e2";
 const find = (fs: ReturnType<typeof analyzeTransaction>, rule: string) =>
   fs.find((f) => f.rule === rule);
 
-describe("rule 5.1 — delegatecall (Bybit class)", () => {
+describe("rule 5.1 — delegatecall (blind-signing class)", () => {
   it("flags a Safe execTransaction delegatecall to an unknown contract as catastrophic", () => {
     const data = encodeExecTransaction(ATTACKER, 1, "0x");
     const findings = analyzeTransaction({ to: "0xSafe", data });
     expect(find(findings, "5.1")?.classification).toBe("catastrophically_unsafe");
-    expect(find(findings, "5.1")?.explanation).toContain("Bybit");
+    expect(find(findings, "5.1")?.explanation).toContain("DELEGATECALL");
   });
 
   it("downgrades delegatecall to a known MultiSendCallOnly contract to high_risk", () => {

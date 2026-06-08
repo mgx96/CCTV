@@ -2,8 +2,8 @@
 
 **An embeddable safety layer for crypto wallets.** CCTV inspects what a wallet is
 about to **send** or **sign** and returns plain-English findings *before* the user
-approves — catching cross-chain mis-sends and blind-signing attacks like the one
-that drained Bybit.
+approves — catching cross-chain mis-sends and the blind-signing attacks behind the
+largest multisig drains on record.
 
 - **Two threat models, one SDK.** Cross-chain mis-sends (wrong chain, wrong CEX
   deposit network, wrong address format) **and** blind-signing attacks (malicious
@@ -70,7 +70,7 @@ valid  <  warning  <  high_risk  <  unsafe  <  catastrophically_unsafe
 ### 1. `validateTransaction(tx, opts?)` — what am I really sending?
 
 Decodes the calldata offline and (if a provider is configured) simulates it. This is
-the **Bybit-class defense**: a compromised UI can show "send 0.1 ETH" while the
+the **blind-signing defense**: a compromised UI can show "send 0.1 ETH" while the
 calldata swaps the multisig's logic via `delegatecall`. CCTV decodes the real intent.
 
 ```ts
@@ -113,11 +113,11 @@ const result = validator.validateTransfer({
 
 ## Rules
 
-### Signing safety — the Bybit class (rules 5.x)
+### Signing safety — the blind-signing class (rules 5.x)
 
 | Rule | Name | Worst classification |
 |------|------|----------------------|
-| 5.1 | Delegatecall execution (Bybit/WazirX class) | `catastrophically_unsafe` |
+| 5.1 | Delegatecall execution (multisig-drain class) | `catastrophically_unsafe` |
 | 5.2 | Owner / authority change | `unsafe` |
 | 5.3 | Proxy implementation upgrade | `unsafe` |
 | 5.4 | Token approval (unlimited / `setApprovalForAll`) | `high_risk` |
@@ -164,10 +164,14 @@ Lower-level building blocks (`rpcSimulationProvider`, `interpretSimulation`,
 
 ## Demo
 
-A browser demo lives in [`demo/`](demo/) and is published via GitHub Pages. It has two
-tabs — **Transfer guard** (cross-chain checks) and **Signing guard** (replays the
-Bybit-class delegatecall, unlimited approval, Permit, Seaport, and blind-hash patterns).
-The demo uses public RPCs only; no API key is ever shipped in the bundle.
+A browser demo lives in [`demo/`](demo/) and is published via GitHub Pages. It's built
+for people with no blockchain background: pick a situation (or fill in a transfer) and
+CCTV auto-detects whether it's a transfer, a transaction, or a signature, runs every
+check, and returns a single plain-English verdict — safe, worth a closer look, or stop.
+When a problem is safely correctable (wrong network, unlimited approval), it offers a
+one-tap fix and re-checks; otherwise it steers you to cancel, with a "proceed anyway"
+escape hatch. An **Advanced details** panel exposes the raw findings and payload for
+technical users. The demo uses public RPCs only; no API key is ever shipped in the bundle.
 
 ```bash
 npm install

@@ -28,7 +28,7 @@ const short = (a?: string) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "unknow
 
 /**
  * Decode and risk-classify a transaction's calldata — fully offline.
- * Targets the "what you see is not what you sign" class (Bybit, WazirX, Radiant).
+ * Targets the "what you see is not what you sign" class of blind-signing attacks.
  */
 export function analyzeTransaction(
   tx: EvmTransaction,
@@ -56,7 +56,7 @@ export function analyzeTransaction(
         classification: trusted ? "high_risk" : "catastrophically_unsafe",
         explanation: trusted
           ? `This Safe transaction delegatecalls a known batching contract (${short(innerTo)}). Delegatecall runs external code in your wallet's context — verify every batched action.`
-          : `This Safe transaction performs a DELEGATECALL into ${short(innerTo)}, executing that contract's code with your wallet's full authority. This is the exact mechanism used to drain the Bybit and WazirX multisigs — the displayed action can differ entirely from what executes.`,
+          : `This Safe transaction performs a DELEGATECALL into ${short(innerTo)}, executing that contract's code with your wallet's full authority. This is the mechanism behind the largest multisig drains on record — the displayed action can differ entirely from what executes.`,
         recommendation: trusted
           ? "Verify each inner call before signing."
           : "Do not sign unless you fully trust this contract and verified the raw calldata.",

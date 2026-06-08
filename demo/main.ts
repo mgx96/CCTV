@@ -81,7 +81,7 @@ const PLAIN: Record<string, string> = {
   "4.1": "This token doesn't exist on the network you picked. If you send it, it's gone for good.",
   "4.6": "This exchange doesn't accept this coin on this network. Deposits sent here usually can't be recovered.",
   "4.9": "This address belongs to a different kind of blockchain. Sending here means losing the funds.",
-  "5.1": "This can hand full control of your wallet to a stranger — the exact trick behind the $1.5B Bybit hack.",
+  "5.1": "This can hand full control of your wallet to a stranger — the trick behind the largest crypto thefts on record.",
   "5.2": "This changes who controls the wallet. If you didn't mean to, you could be locked out.",
   "5.3": "This replaces the wallet's underlying code. Only continue if you completely trust the source.",
   "5.4": "You're about to let this app move your tokens — and the amount is unlimited.",
@@ -290,9 +290,9 @@ const SCENARIOS: ScenarioDef[] = [
     }),
   },
   {
-    id: "bybit",
+    id: "hidden-control",
     label: "Confirm a vault transaction",
-    blurb: "Looks routine, but quietly hands over control — the Bybit hack pattern.",
+    blurb: "Looks routine, but quietly hands over control of your wallet.",
     make: () => ({ kind: "transaction", tx: { to: SAFE, data: encodeExecTransaction(ATTACKER, 1, "0x") } }),
   },
   {
