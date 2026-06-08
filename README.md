@@ -15,9 +15,6 @@ largest multisig drains on record.
 - **Dependency-free core.** No web3 libraries — a minimal ABI decoder, shipped as ESM
   with TypeScript types.
 
-> Status: working MVP. The author (`mgx96`) maintains this as a portfolio project;
-> registries are community snapshots, not guarantees — always confirm in your wallet.
-
 ---
 
 ## Install
